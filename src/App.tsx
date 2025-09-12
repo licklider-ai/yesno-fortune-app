@@ -1,14 +1,6 @@
 import React, { useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 
-// =============================================================
-// 3種類の診断から選択して、5問に答えて結果を表示する実装
-// - 惑星診断（既存）
-// - 花診断
-// - 恋愛診断
-// 既存の App.css をそのまま利用できます。
-// =============================================================
-
 type Answer = 'YES' | 'NO'
 
 type Fortune = {
@@ -16,14 +8,14 @@ type Fortune = {
   summary: string
   luckyColor: string
   luckyAction: string
-  scores: { work: number; love: number; money: number } // 表示用（恋愛診断でも共通UIで見せます）
+  scores: { work: number; love: number; money: number }
 }
 
 type Question = {
   id: string
   text: string
-  onYes: string[] // YES時に加点するタイプIDの配列
-  onNo: string[]  // NO時に加点するタイプIDの配列
+  onYes: string[]
+  onNo: string[]
 }
 
 type Quiz = {
@@ -33,23 +25,23 @@ type Quiz = {
   hashtag: string
   questions: Question[]
   fortunes: Record<string, Fortune>
-  priority: string[] // 同点時の優先順位
+  priority: string[]
 }
 
 const REQUIRED_QUESTIONS = 5
 
-// ------------------------ 惑星診断（既存） ------------------------
+// ---- 惑星診断 ----
 const planet: Quiz = {
   id: 'planet',
   name: '惑星診断',
   description: 'エネルギーやリズムの傾向を判定',
   hashtag: '#惑星診断 #YESNO占い',
   questions: [
-    { id: 'p1', text: '最近、新しいことにワクワクしますか？', onYes: ['sun', 'thunder', 'star'], onNo: ['moon', 'mountain', 'sea'] },
-    { id: 'p2', text: '計画を立てるのが好きですか？', onYes: ['mountain'], onNo: ['sea', 'flower'] },
-    { id: 'p3', text: '初対面でもすぐ打ち解けますか？', onYes: ['sun', 'flower'], onNo: ['star', 'moon'] },
-    { id: 'p4', text: '思い立ったらすぐ行動しますか？', onYes: ['thunder', 'sun'], onNo: ['moon', 'sea'] },
-    { id: 'p5', text: '一人の時間が充実していますか？', onYes: ['star', 'moon'], onNo: ['flower', 'sun'] },
+    { id: 'p1', text: '最近、新しいことにワクワクしますか？', onYes: ['sun','thunder','star'], onNo: ['moon','mountain','sea'] },
+    { id: 'p2', text: '計画を立てるのが好きですか？', onYes: ['mountain'], onNo: ['sea','flower'] },
+    { id: 'p3', text: '初対面でもすぐ打ち解けますか？', onYes: ['sun','flower'], onNo: ['star','moon'] },
+    { id: 'p4', text: '思い立ったらすぐ行動しますか？', onYes: ['thunder','sun'], onNo: ['moon','sea'] },
+    { id: 'p5', text: '一人の時間が充実していますか？', onYes: ['star','moon'], onNo: ['flower','sun'] },
   ],
   fortunes: {
     sun: { title: '太陽タイプ', summary: '勢いと発信力が高まり、挑戦への追い風。小さく始めてスケールを。', luckyColor: 'ゴールド', luckyAction: '朝の散歩で深呼吸', scores: { work: 5, love: 4, money: 3 } },
@@ -60,21 +52,21 @@ const planet: Quiz = {
     star: { title: '星タイプ', summary: 'マイペースが最強。自分のリズムで直感が冴える。', luckyColor: 'ネイビー', luckyAction: '通知を1時間ミュート', scores: { work: 4, love: 5, money: 3 } },
     flower: { title: '花タイプ', summary: 'つながり運が開花。小さな気遣いが大きな実りに。', luckyColor: 'ピンク', luckyAction: '感謝を一言メッセージ', scores: { work: 3, love: 5, money: 4 } },
   },
-  priority: ['sun', 'thunder', 'mountain', 'sea', 'moon', 'star', 'flower'],
+  priority: ['sun','thunder','mountain','sea','moon','star','flower'],
 }
 
-// ------------------------ 花診断 ------------------------
+// ---- 花診断 ----
 const flower: Quiz = {
   id: 'flower',
   name: '花診断',
   description: 'あなたを花に例えると？性質やムードを判定',
   hashtag: '#花診断 #YESNO占い',
   questions: [
-    { id: 'f1', text: '朝型の生活リズムですか？', onYes: ['sunflower', 'tulip'], onNo: ['lavender', 'rose'] },
-    { id: 'f2', text: '繊細な気配りに自信がありますか？', onYes: ['rose', 'sakura'], onNo: ['sunflower'] },
-    { id: 'f3', text: '新しい場所や人との出会いにワクワクしますか？', onYes: ['tulip', 'sunflower'], onNo: ['lavender'] },
+    { id: 'f1', text: '朝型の生活リズムですか？', onYes: ['sunflower','tulip'], onNo: ['lavender','rose'] },
+    { id: 'f2', text: '繊細な気配りに自信がありますか？', onYes: ['rose','sakura'], onNo: ['sunflower'] },
+    { id: 'f3', text: '新しい場所や人との出会いにワクワクしますか？', onYes: ['tulip','sunflower'], onNo: ['lavender'] },
     { id: 'f4', text: '香りでリラックスすることが多いですか？', onYes: ['lavender'], onNo: ['sunflower'] },
-    { id: 'f5', text: '季節の移ろいを大切にしますか？', onYes: ['sakura', 'rose'], onNo: ['tulip'] },
+    { id: 'f5', text: '季節の移ろいを大切にしますか？', onYes: ['sakura','rose'], onNo: ['tulip'] },
   ],
   fortunes: {
     sakura: { title: '桜タイプ', summary: 'さりげない上品さ。節目で力を発揮し、人の心を和ませます。', luckyColor: '薄桃色', luckyAction: '季節の行事を楽しむ', scores: { work: 4, love: 5, money: 3 } },
@@ -83,30 +75,30 @@ const flower: Quiz = {
     lavender: { title: 'ラベンダータイプ', summary: '落ち着きと癒し。丁寧なペースで質を高めます。', luckyColor: 'ラベンダー', luckyAction: '香りでリラックス', scores: { work: 3, love: 4, money: 4 } },
     tulip: { title: 'チューリップタイプ', summary: '好奇心と親しみやすさ。新しい出会いがチャンスに。', luckyColor: 'レッド', luckyAction: '小さな挑戦を積む', scores: { work: 4, love: 4, money: 3 } },
   },
-  priority: ['sunflower', 'rose', 'sakura', 'tulip', 'lavender'],
+  priority: ['sunflower','rose','sakura','tulip','lavender'],
 }
 
-// ------------------------ 恋愛診断 ------------------------
+// ---- 恋愛診断 ----
 const love: Quiz = {
   id: 'love',
   name: '恋愛診断',
   description: '恋のアプローチ傾向と相性アップのコツ',
   hashtag: '#恋愛診断 #YESNO占い',
   questions: [
-    { id: 'l1', text: '好きになったら自分から誘うほうですか？', onYes: ['leader', 'romantic'], onNo: ['steady', 'independent'] },
-    { id: 'l2', text: 'サプライズや記念日を大切にしますか？', onYes: ['romantic', 'caregiver'], onNo: ['independent'] },
-    { id: 'l3', text: 'メッセージの返信は早い方ですか？', onYes: ['steady', 'caregiver'], onNo: ['independent'] },
-    { id: 'l4', text: '一人時間もかなり大事だと感じますか？', onYes: ['independent'], onNo: ['leader', 'romantic'] },
-    { id: 'l5', text: '相手の話をじっくり聴くのが得意ですか？', onYes: ['caregiver', 'steady'], onNo: ['leader'] },
+    { id: 'l1', text: '好きになったら自分から誘うほうですか？', onYes: ['leader','romantic'], onNo: ['steady','independent'] },
+    { id: 'l2', text: 'サプライズや記念日を大切にしますか？', onYes: ['romantic','caregiver'], onNo: ['independent'] },
+    { id: 'l3', text: 'メッセージの返信は早い方ですか？', onYes: ['steady','caregiver'], onNo: ['independent'] },
+    { id: 'l4', text: '一人時間もかなり大事だと感じますか？', onYes: ['independent'], onNo: ['leader','romantic'] },
+    { id: 'l5', text: '相手の話をじっくり聴くのが得意ですか？', onYes: ['caregiver','steady'], onNo: ['leader'] },
   ],
   fortunes: {
-    leader: { title: 'リーダータイプ', summary: '積極的なアプローチで関係を前に進めます。主導しつつ相手のペース配慮を。', luckyColor: 'コーラル', luckyAction: 'デートの提案を先に出す', scores: { work: 4, love: 5, money: 3 } },
-    romantic: { title: 'ロマンチストタイプ', summary: 'ドラマチックな演出で心を動かす達人。サプライズは控えめ×継続が鍵。', luckyColor: 'ワインレッド', luckyAction: '手書きのメッセージ', scores: { work: 3, love: 5, money: 3 } },
-    steady: { title: '堅実タイプ', summary: '安心感と誠実さが魅力。小さな積み重ねで深い信頼を育てます。', luckyColor: 'オリーブ', luckyAction: '週1の連絡習慣', scores: { work: 5, love: 4, money: 4 } },
+    leader: { title: 'リーダータイプ', summary: '積極的に関係を前へ。主導しつつ相手のペース配慮を。', luckyColor: 'コーラル', luckyAction: 'デートの提案を先に出す', scores: { work: 4, love: 5, money: 3 } },
+    romantic: { title: 'ロマンチストタイプ', summary: '演出で心を動かす達人。サプライズは控えめ×継続が鍵。', luckyColor: 'ワインレッド', luckyAction: '手書きのメッセージ', scores: { work: 3, love: 5, money: 3 } },
+    steady: { title: '堅実タイプ', summary: '安心感と誠実さが魅力。小さな積み重ねで信頼を育てます。', luckyColor: 'オリーブ', luckyAction: '週1の連絡習慣', scores: { work: 5, love: 4, money: 4 } },
     independent: { title: 'マイペースタイプ', summary: '自立心が強く距離感バランスに長ける。共有時間は「質」を大切に。', luckyColor: 'ネイビー', luckyAction: '1人時間の予定化', scores: { work: 4, love: 4, money: 4 } },
     caregiver: { title: 'サポータータイプ', summary: '気配り上手で寄り添い力抜群。自分の希望も言葉にするほど好循環。', luckyColor: 'ペールピンク', luckyAction: 'お願いを1つ相手に伝える', scores: { work: 4, love: 5, money: 3 } },
   },
-  priority: ['leader', 'romantic', 'steady', 'independent', 'caregiver'],
+  priority: ['leader','romantic','steady','independent','caregiver'],
 }
 
 const QUIZZES: Quiz[] = [planet, flower, love]
@@ -122,7 +114,6 @@ function Stars({ value }: { value: number }) {
 }
 
 export default function App() {
-  // メニュー / 実施中 / 結果
   const [quizId, setQuizId] = useState<string | null>(null)
   const [step, setStep] = useState(0)
   const [history, setHistory] = useState<{ q: string; a: Answer }[]>([])
@@ -134,17 +125,12 @@ export default function App() {
   const isDone = !!quiz && step >= REQUIRED_QUESTIONS
 
   const startQuiz = (id: string) => {
-    setQuizId(id)
-    setStep(0)
-    setHistory([])
-    setScores({})
-    setFinalType(null)
+    setQuizId(id); setStep(0); setHistory([]); setScores({}); setFinalType(null)
   }
 
   const onAnswer = (ans: Answer) => {
     if (!quiz) return
     const q = quiz.questions[step]
-    // スコア加算
     const targets = ans === 'YES' ? q.onYes : q.onNo
     setScores(prev => {
       const next = { ...prev }
@@ -155,10 +141,8 @@ export default function App() {
 
     const nextStep = step + 1
     if (nextStep >= REQUIRED_QUESTIONS) {
-      // 集計
       setFinalType(prev => {
         const entries = Object.entries(scores) as [string, number][]
-        // 直前回答のスコアも反映した上で判定
         targets.forEach(t => {
           const idx = entries.findIndex(([k]) => k === t)
           if (idx >= 0) entries[idx] = [t, entries[idx][1] + 1]
@@ -174,13 +158,8 @@ export default function App() {
     setStep(nextStep)
   }
 
-  const resetSameQuiz = () => {
-    setStep(0); setHistory([]); setScores({}); setFinalType(null)
-  }
-
-  const backToMenu = () => {
-    setQuizId(null); setStep(0); setHistory([]); setScores({}); setFinalType(null)
-  }
+  const resetSameQuiz = () => { setStep(0); setHistory([]); setScores({}); setFinalType(null) }
+  const backToMenu = () => { setQuizId(null); setStep(0); setHistory([]); setScores({}); setFinalType(null) }
 
   const shareText = useMemo(() => {
     if (!quiz || !finalType) return ''
@@ -205,13 +184,7 @@ export default function App() {
 
           <AnimatePresence mode="wait">
             {isMenu ? (
-              <motion.div
-                key="menu"
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.15 }}
-              >
+              <motion.div key="menu" initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-8}} transition={{duration:0.15}}>
                 <div className="grid" style={{ gridTemplateColumns: 'repeat(1, minmax(0, 1fr))' }}>
                   {QUIZZES.map(q => (
                     <div key={q.id} className="tile" style={{ display:'flex', flexDirection:'column', gap:8 }}>
@@ -225,13 +198,7 @@ export default function App() {
                 </div>
               </motion.div>
             ) : !isDone && quiz ? (
-              <motion.div
-                key={`quiz-${quiz.id}-${step}`}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.15 }}
-              >
+              <motion.div key={`quiz-${quiz.id}-${step}`} initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-8}} transition={{duration:0.15}}>
                 <div className="kicker">{quiz.name}</div>
                 <div className="question">
                   {step + 1}/{REQUIRED_QUESTIONS}：{quiz.questions[step].text}
@@ -240,21 +207,13 @@ export default function App() {
                   <button className="btn-primary" onClick={() => onAnswer('YES')}>YES</button>
                   <button className="btn-secondary" onClick={() => onAnswer('NO')}>NO</button>
                 </div>
-                {history.length > 0 && (
-                  <div className="muted">これまで: {history.map((h, i) => `${i + 1}.${h.a}`).join(' ')}</div>
-                )}
+                {history.length > 0 && <div className="muted">これまで: {history.map((h,i)=>`${i+1}.${h.a}`).join(' ')}</div>}
                 <div className="actions" style={{ marginTop: 8 }}>
                   <button className="btn-secondary" onClick={backToMenu}>← 診断一覧に戻る</button>
                 </div>
               </motion.div>
             ) : quiz ? (
-              <motion.div
-                key={`result-${quiz.id}-${finalType ?? 'none'}`}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.15 }}
-              >
+              <motion.div key={`result-${quiz.id}-${finalType ?? 'none'}`} initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-8}} transition={{duration:0.15}}>
                 {finalType && (
                   <>
                     <div className="kicker">{quiz.name}｜診断結果</div>
@@ -293,7 +252,7 @@ export default function App() {
                     <div className="actions">
                       <button className="btn-primary" onClick={resetSameQuiz}>同じ診断でもう一度</button>
                       <button className="btn-secondary" onClick={backToMenu}>診断一覧に戻る</button>
-                      <button className="btn-secondary" onClick={async () => { try { await navigator.clipboard.writeText(shareText); alert('シェア用テキストをコピーしました！') } catch {} }}>結果をコピー</button>
+                      <button className="btn-secondary" onClick={async ()=>{ try{ await navigator.clipboard.writeText(shareText); alert('シェア用テキストをコピーしました！')}catch{}}}>結果をコピー</button>
                     </div>
                     <textarea className="share" readOnly rows={4} value={shareText} />
                   </>
