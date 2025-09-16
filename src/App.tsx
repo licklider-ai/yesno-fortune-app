@@ -1,7 +1,8 @@
-import React, { useMemo, useState, useEffect } from 'react'
+import React, { useMemo, useState, useEffect} from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 
-const API_BASE = (import.meta as any).env?.VITE_API_URL || 'http://localhost:8080'
+const API_BASE =
+  (import.meta as any).env?.VITE_API_URL || 'http://localhost:8080'
 
 // =============================================================
 // 3種類の診断から選択して、5問に答えて結果を表示する実装
@@ -18,14 +19,14 @@ type Fortune = {
   summary: string
   luckyColor: string
   luckyAction: string
-  scores: { work: number; love: number; money: number }
+  scores: { work: number; love: number; money: number } // 表示用（恋愛診断でも共通UIで見せます）
 }
 
 type Question = {
   id: string
   text: string
-  onYes: string[]
-  onNo: string[]
+  onYes: string[] // YES時に加点するタイプIDの配列
+  onNo: string[]  // NO時に加点するタイプIDの配列
 }
 
 type Quiz = {
@@ -35,12 +36,12 @@ type Quiz = {
   hashtag: string
   questions: Question[]
   fortunes: Record<string, Fortune>
-  priority: string[]
+  priority: string[] // 同点時の優先順位
 }
 
 const REQUIRED_QUESTIONS = 5
 
-// ------------------------ 惑星診断 ------------------------
+// ------------------------ 惑星診断（既存） ------------------------
 const planet: Quiz = {
   id: 'planet',
   name: '惑星診断',
@@ -123,7 +124,6 @@ function Stars({ value }: { value: number }) {
   )
 }
 
-// --------- StatsView（統計画面）---------
 function StatsView({ onClose }: { onClose: () => void }) {
   const [totals, setTotals] = useState<Record<string, { yes: number; no: number }>>({})
   const [detail, setDetail] = useState<{ quizId: string; items: { questionId: string; yes: number; no: number }[] } | null>(null)
@@ -143,7 +143,7 @@ function StatsView({ onClose }: { onClose: () => void }) {
           })
         )
         if (!canceled) setTotals(Object.fromEntries(pairs))
-      } catch {
+      } catch (e: any) {
         if (!canceled) setErr('統計の取得に失敗しました')
       } finally {
         if (!canceled) setLoading(false)
@@ -217,15 +217,14 @@ function StatsView({ onClose }: { onClose: () => void }) {
   )
 }
 
-// --------- App本体 ---------
 export default function App() {
+  // メニュー / 実施中 / 結果
   const [quizId, setQuizId] = useState<string | null>(null)
   const [step, setStep] = useState(0)
   const [history, setHistory] = useState<{ q: string; a: Answer }[]>([])
   const [scores, setScores] = useState<Record<string, number>>({})
   const [finalType, setFinalType] = useState<string | null>(null)
   const [showStats, setShowStats] = useState(false)
-
   const quiz = QUIZZES.find(q => q.id === quizId) || null
   const isMenu = !quiz
   const isDone = !!quiz && step >= REQUIRED_QUESTIONS
@@ -242,13 +241,17 @@ export default function App() {
     if (!quiz) return
     const q = quiz.questions[step]
 
-    // クリックログをAPIへ送信
-    void fetch(`${API_BASE}/api/logs`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ quizId: quiz.id, questionId: q.id, answer: ans }),
-    }).catch(() => {})
+   void fetch(`${API_BASE}/api/logs`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      quizId: quiz.id,
+      questionId: q.id,
+      answer: ans,
+    }),
+  }).catch(() => {})
 
+    // スコア加算
     const targets = ans === 'YES' ? q.onYes : q.onNo
     setScores(prev => {
       const next = { ...prev }
@@ -259,8 +262,10 @@ export default function App() {
 
     const nextStep = step + 1
     if (nextStep >= REQUIRED_QUESTIONS) {
+      // 集計
       setFinalType(prev => {
         const entries = Object.entries(scores) as [string, number][]
+        // 直前回答のスコアも反映した上で判定
         targets.forEach(t => {
           const idx = entries.findIndex(([k]) => k === t)
           if (idx >= 0) entries[idx] = [t, entries[idx][1] + 1]
@@ -279,6 +284,7 @@ export default function App() {
   const resetSameQuiz = () => {
     setStep(0); setHistory([]); setScores({}); setFinalType(null)
   }
+
   const backToMenu = () => {
     setQuizId(null); setStep(0); setHistory([]); setScores({}); setFinalType(null)
   }
@@ -299,130 +305,130 @@ export default function App() {
     <div className="container">
       <div className="card">
         <div className="card-body">
-
-          {/* ヘッダー：右上に統計ボタン */}
-          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap:12, marginBottom:12 }}>
-            <div style={{ textAlign:'left' }}>
-              <h1 style={{ margin:'0 0 4px' }}>YES/NO占いコレクション</h1>
-              <p className="lead" style={{ margin:0 }}>3種類から選んで、5問で診断</p>
-            </div>
-            {isMenu && (
-              <button className="btn-secondary" onClick={() => setShowStats(true)}>
-                統計を見る
-              </button>
-            )}
+          <div style={{ textAlign:'center', marginBottom: 12 }}>
+            <h1>YES/NO占いコレクション</h1>
+            <p className="lead">3種類から選んで、5問で診断</p>
           </div>
 
-          <AnimatePresence mode="wait">
-            {isMenu ? (
-              showStats ? (
-                <motion.div
-                  key="stats"
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -8 }}
-                  transition={{ duration: 0.15 }}
-                >
-                  <StatsView onClose={() => setShowStats(false)} />
-                </motion.div>
-              ) : (
-                <motion.div
-                  key="menu"
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -8 }}
-                  transition={{ duration: 0.15 }}
-                >
-                  <div className="grid" style={{ gridTemplateColumns: 'repeat(1, minmax(0, 1fr))' }}>
-                    {QUIZZES.map(q => (
-                      <div key={q.id} className="tile" style={{ display:'flex', flexDirection:'column', gap:8 }}>
-                        <div style={{ fontWeight: 800, fontSize: 18 }}>{q.name}</div>
-                        <div className="result-summary">{q.description}</div>
-                        <div className="actions" style={{ justifyContent:'flex-start' }}>
-                          <button className="btn-primary" onClick={() => startQuiz(q.id)}>この診断を始める</button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </motion.div>
-              )
-            ) : !isDone && quiz ? (
-              <motion.div
-                key={`quiz-${quiz.id}-${step}`}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.15 }}
-              >
-                <div className="kicker">{quiz.name}</div>
-                <div className="question">
-                  {step + 1}/{REQUIRED_QUESTIONS}：{quiz.questions[step].text}
-                </div>
-                <div className="btns">
-                  <button className="btn-primary" onClick={() => onAnswer('YES')}>YES</button>
-                  <button className="btn-secondary" onClick={() => onAnswer('NO')}>NO</button>
-                </div>
-                {history.length > 0 && (
-                  <div className="muted">これまで: {history.map((h, i) => `${i + 1}.${h.a}`).join(' ')}</div>
-                )}
-                <div className="actions" style={{ marginTop: 8 }}>
-                  <button className="btn-secondary" onClick={backToMenu}>← 診断一覧に戻る</button>
-                </div>
-              </motion.div>
-            ) : quiz ? (
-              <motion.div
-                key={`result-${quiz.id}-${finalType ?? 'none'}`}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.15 }}
-              >
-                {finalType && (
-                  <>
-                    <div className="kicker">{quiz.name}｜診断結果</div>
-                    <div className="result-title" style={{ textAlign:'center' }}>{quiz.fortunes[finalType].title}</div>
-                    <p className="result-summary" style={{ textAlign:'center' }}>{quiz.fortunes[finalType].summary}</p>
+<AnimatePresence mode="wait">
+  {isMenu ? (
+    // ▼ ここが新しく追加される「メニュー or 統計ビュー」の分岐
+    showStats ? (
+      <motion.div
+        key="stats"
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -8 }}
+        transition={{ duration: 0.15 }}
+      >
+        <StatsView onClose={() => setShowStats(false)} />
+      </motion.div>
+    ) : (
+      <motion.div
+        key="menu"
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -8 }}
+        transition={{ duration: 0.15 }}
+      >
+        {/* 追加：統計ボタン（グリッドの前に配置） */}
+        <div style={{ display:'flex', justifyContent:'flex-end', marginBottom:8 }}>
+          <button className="btn-secondary" onClick={() => setShowStats(true)}>統計を見る</button>
+        </div>
 
-                    <div className="grid">
-                      <div className="tile">
-                        <div className="kicker">ラッキーカラー</div>
-                        <div className="val">{quiz.fortunes[finalType].luckyColor}</div>
-                      </div>
-                      <div className="tile" style={{ gridColumn: 'span 2' }}>
-                        <div className="kicker">ラッキーアクション</div>
-                        <div className="val">{quiz.fortunes[finalType].luckyAction}</div>
-                      </div>
-                    </div>
+        {/* ここから下は既存のメニュー（そのまま） */}
+        <div className="grid" style={{ gridTemplateColumns: 'repeat(1, minmax(0, 1fr))' }}>
+          {QUIZZES.map(q => (
+            <div key={q.id} className="tile" style={{ display:'flex', flexDirection:'column', gap:8 }}>
+              <div style={{ fontWeight: 800, fontSize: 18 }}>{q.name}</div>
+              <div className="result-summary">{q.description}</div>
+              <div className="actions" style={{ justifyContent:'flex-start' }}>
+                <button className="btn-primary" onClick={() => startQuiz(q.id)}>この診断を始める</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </motion.div>
+    )
+  ) : !isDone && quiz ? (
+    // ▼ ここからはあなたの既存「クイズ進行」ブロック（変更なし）
+    <motion.div
+      key={`quiz-${quiz.id}-${step}`}
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -8 }}
+      transition={{ duration: 0.15 }}
+    >
+      <div className="kicker">{quiz.name}</div>
+      <div className="question">
+        {step + 1}/{REQUIRED_QUESTIONS}：{quiz.questions[step].text}
+      </div>
+      <div className="btns">
+        <button className="btn-primary" onClick={() => onAnswer('YES')}>YES</button>
+        <button className="btn-secondary" onClick={() => onAnswer('NO')}>NO</button>
+      </div>
+      {history.length > 0 && (
+        <div className="muted">これまで: {history.map((h, i) => `${i + 1}.${h.a}`).join(' ')}</div>
+      )}
+      <div className="actions" style={{ marginTop: 8 }}>
+        <button className="btn-secondary" onClick={backToMenu}>← 診断一覧に戻る</button>
+      </div>
+    </motion.div>
+  ) : quiz ? (
+    // ▼ ここからはあなたの既存「結果」ブロック（変更なし）
+    <motion.div
+      key={`result-${quiz.id}-${finalType ?? 'none'}`}
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -8 }}
+      transition={{ duration: 0.15 }}
+    >
+      {finalType && (
+        <>
+          <div className="kicker">{quiz.name}｜診断結果</div>
+          <div className="result-title" style={{ textAlign:'center' }}>{quiz.fortunes[finalType].title}</div>
+          <p className="result-summary" style={{ textAlign:'center' }}>{quiz.fortunes[finalType].summary}</p>
 
-                    <div className="tile" style={{ marginTop: 12 }}>
-                      <div className="kicker" style={{ marginBottom: 6 }}>運勢</div>
-                      <div className="grid" style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
-                        <div style={{ textAlign:'center' }}>
-                          <div>仕事運</div>
-                          <Stars value={quiz.fortunes[finalType].scores.work} />
-                        </div>
-                        <div style={{ textAlign:'center' }}>
-                          <div>恋愛運</div>
-                          <Stars value={quiz.fortunes[finalType].scores.love} />
-                        </div>
-                        <div style={{ textAlign:'center' }}>
-                          <div>金運</div>
-                          <Stars value={quiz.fortunes[finalType].scores.money} />
-                        </div>
-                      </div>
-                    </div>
+          <div className="grid">
+            <div className="tile">
+              <div className="kicker">ラッキーカラー</div>
+              <div className="val">{quiz.fortunes[finalType].luckyColor}</div>
+            </div>
+            <div className="tile" style={{ gridColumn: 'span 2' }}>
+              <div className="kicker">ラッキーアクション</div>
+              <div className="val">{quiz.fortunes[finalType].luckyAction}</div>
+            </div>
+          </div>
 
-                    <div className="actions">
-                      <button className="btn-primary" onClick={resetSameQuiz}>同じ診断でもう一度</button>
-                      <button className="btn-secondary" onClick={backToMenu}>診断一覧に戻る</button>
-                      <button className="btn-secondary" onClick={async () => { try { await navigator.clipboard.writeText(shareText); alert('シェア用テキストをコピーしました！') } catch {} }}>結果をコピー</button>
-                    </div>
-                    <textarea className="share" readOnly rows={4} value={shareText} />
-                  </>
-                )}
-              </motion.div>
-            ) : null}
-          </AnimatePresence>
+          <div className="tile" style={{ marginTop: 12 }}>
+            <div className="kicker" style={{ marginBottom: 6 }}>運勢</div>
+            <div className="grid" style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
+              <div style={{ textAlign:'center' }}>
+                <div>仕事運</div>
+                <Stars value={quiz.fortunes[finalType].scores.work} />
+              </div>
+              <div style={{ textAlign:'center' }}>
+                <div>恋愛運</div>
+                <Stars value={quiz.fortunes[finalType].scores.love} />
+              </div>
+              <div style={{ textAlign:'center' }}>
+                <div>金運</div>
+                <Stars value={quiz.fortunes[finalType].scores.money} />
+              </div>
+            </div>
+          </div>
+
+          <div className="actions">
+            <button className="btn-primary" onClick={resetSameQuiz}>同じ診断でもう一度</button>
+            <button className="btn-secondary" onClick={backToMenu}>診断一覧に戻る</button>
+            <button className="btn-secondary" onClick={async () => { try { await navigator.clipboard.writeText(shareText); alert('シェア用テキストをコピーしました！') } catch {} }}>結果をコピー</button>
+          </div>
+          <textarea className="share" readOnly rows={4} value={shareText} />
+        </>
+      )}
+    </motion.div>
+  ) : null}
+</AnimatePresence>
 
         </div>
       </div>
