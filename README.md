@@ -1,60 +1,49 @@
 # YES/NO 占いアプリ
 
-最短2〜3問の YES/NO で占い結果を表示するシンプルな Web アプリです。  
-React + TypeScript + Vite で構成、Docker対応。
+3種類（**惑星 / 花 / 恋愛**）から選び、YES/NO で5問回答 → 診断結果を表示するシンプルな Web アプリ。  
+**v0.2.0** から回答ログを **PostgreSQL** に保存し、アプリ内で **統計ダッシュボード** を閲覧できます。
 
-## ローカル実行（ターミナル）
+---
+
+## 新機能（v0.2.0）
+- ✅ **DB ログ保存**：YES/NO を PostgreSQL に保存  
+- ✅ **統計ダッシュボード**：クイズ別合計・設問別内訳を UI で確認  
+- ✅ **API 追加**：`/api/logs`（保存）, `/api/stats/*`（集計）, `/api/health`（疎通）
+
+### 使用ポート
+- Web（Vite Preview）：**5173**  
+- API（Express）：**8080**  
+- DB（PostgreSQL）：**5432**
+
+---
+
+## クイックスタート（Docker：起動〜動作確認まで一括）
+下を **そのまま1回コピペ** すれば、起動→疎通→サンプルログ保存→集計→DB確認まで完了します。
 
 ```bash
-# 1) 依存関係をインストール
-npm ci  # package-lock が無い場合は npm i
+# 1) 起動（Web/API/DBを一括）
+docker compose up -d --build
 
-# 2) 開発サーバ起動
-npm run dev
-# => http://localhost:5173 を開く
-```
+# 2) API ヘルス待機（数秒）
+until curl -sf http://localhost:8080/api/health >/dev/null; do
+  echo "waiting API..."; sleep 1
+done
+echo "API OK: http://localhost:8080/api/health"
 
-## Docker 実行
+# 3) サンプルログ投入（planet/p1 を YES）
+curl -sS -X POST http://localhost:8080/api/logs \
+  -H 'Content-Type: application/json' \
+  -d '{"quizId":"planet","questionId":"p1","answer":"YES"}'
 
-```bash
-# イメージビルド
-docker build -t yesno-fortune .
+# 4) 集計確認（クイズ別 / 設問別）
+echo "# Quiz Totals"
+curl -sS http://localhost:8080/api/stats/quiz/planet
+echo "# Question Breakdown"
+curl -sS http://localhost:8080/api/stats/question/planet
 
-# 実行（ポート 5173）
-docker run --rm -p 5173:5173 yesno-fortune
-# or
-docker compose up --build
-```
+# 5) DB 直接確認（直近 5 件）
+docker compose exec -T db psql -U app -d yesno -c \
+"SELECT id, quiz_id, question_id, answer, created_at FROM log_entries ORDER BY id DESC LIMIT 5;"
 
-## Git 運用（master / develop / feature）
-
-初回セットアップ例：
-```bash
-git init
-git add .
-git commit -m "chore: initial commit"
-git branch -M master
-git checkout -b develop
-git checkout -b feature/initial-ui
-# リモート作成後：
-git remote add origin <YOUR_REPO_URL>
-git push -u origin master
-git push -u origin develop
-git push -u origin feature/initial-ui
-```
-
-フロー例：
-- 開発は `feature/*` ブランチで行い、完了したら `develop` へ PR マージ  
-- リリース時に `develop` → `master` へマージしタグ付け
-
-## 構成
-
-- `src/App.tsx` … 質問分岐と結果表示（データ駆動）
-- `src/App.css` … シンプルなスタイル
-- `Dockerfile` / `docker-compose.yml` … Dockerで実行
-- `scripts/git-setup.sh` … ブランチ作成と初回プッシュ補助
-
-## カスタマイズ
-
-- 質問の分岐や結果は `NODES` を編集するだけで増減・文言変更できます。
-- スタイルを Tailwind などに差し替える場合は `App.css` を変更してください。
+# 6) Web を開く
+echo "Open Web: http://localhost:5173"
