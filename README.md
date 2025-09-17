@@ -47,3 +47,4 @@ docker compose exec -T db psql -U app -d yesno -c \
 
 # 6) Web を開く
 echo "Open Web: http://localhost:5173"
+```
