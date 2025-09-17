@@ -225,6 +225,7 @@ export default function App() {
   const [scores, setScores] = useState<Record<string, number>>({})
   const [finalType, setFinalType] = useState<string | null>(null)
 
+
   const quiz = QUIZZES.find(q => q.id === quizId) || null
   const isMenu = !quiz
   const isDone = !!quiz && step >= REQUIRED_QUESTIONS
@@ -300,6 +301,7 @@ export default function App() {
         <div className="card-body">
 
           {/* ヘッダー：右上に統計ボタン */}
+
             <div style={{ textAlign:'left' }}>
               <h1 style={{ margin:'0 0 4px' }}>YES/NO占いコレクション</h1>
               <p className="lead" style={{ margin:0 }}>3種類から選んで、5問で診断</p>
@@ -326,6 +328,7 @@ export default function App() {
                     ))}
                   </div>
                 </motion.div>
+
             ) : !isDone && quiz ? (
               <motion.div
                 key={`quiz-${quiz.id}-${step}`}
