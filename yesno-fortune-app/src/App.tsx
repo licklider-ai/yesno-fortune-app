@@ -1,5 +1,7 @@
-import React, { useMemo, useState } from 'react'
+import React, { useMemo, useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+
+const API_BASE = (import.meta as any).env?.VITE_API_URL || 'http://localhost:8080'
 
 // =============================================================
 // 3種類の診断から選択して、5問に答えて結果を表示する実装
@@ -16,14 +18,14 @@ type Fortune = {
   summary: string
   luckyColor: string
   luckyAction: string
-  scores: { work: number; love: number; money: number } // 表示用（恋愛診断でも共通UIで見せます）
+  scores: { work: number; love: number; money: number }
 }
 
 type Question = {
   id: string
   text: string
-  onYes: string[] // YES時に加点するタイプIDの配列
-  onNo: string[]  // NO時に加点するタイプIDの配列
+  onYes: string[]
+  onNo: string[]
 }
 
 type Quiz = {
@@ -33,12 +35,12 @@ type Quiz = {
   hashtag: string
   questions: Question[]
   fortunes: Record<string, Fortune>
-  priority: string[] // 同点時の優先順位
+  priority: string[]
 }
 
 const REQUIRED_QUESTIONS = 5
 
-// ------------------------ 惑星診断（既存） ------------------------
+// ------------------------ 惑星診断 ------------------------
 const planet: Quiz = {
   id: 'planet',
   name: '惑星診断',
@@ -121,8 +123,102 @@ function Stars({ value }: { value: number }) {
   )
 }
 
+// --------- StatsView（統計画面）---------
+function StatsView({ onClose }: { onClose: () => void }) {
+  const [totals, setTotals] = useState<Record<string, { yes: number; no: number }>>({})
+  const [detail, setDetail] = useState<{ quizId: string; items: { questionId: string; yes: number; no: number }[] } | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+
+  useEffect(() => {
+    let canceled = false
+    ;(async () => {
+      try {
+        setLoading(true); setErr(null)
+        const pairs = await Promise.all(
+          QUIZZES.map(async (q) => {
+            const r = await fetch(`${API_BASE}/api/stats/quiz/${q.id}`)
+            const d = await r.json()
+            return [q.id, { yes: d.yes ?? 0, no: d.no ?? 0 }] as const
+          })
+        )
+        if (!canceled) setTotals(Object.fromEntries(pairs))
+      } catch {
+        if (!canceled) setErr('統計の取得に失敗しました')
+      } finally {
+        if (!canceled) setLoading(false)
+      }
+    })()
+    return () => { canceled = true }
+  }, [])
+
+  const loadDetail = async (quizId: string) => {
+    try {
+      setLoading(true); setErr(null)
+      const r = await fetch(`${API_BASE}/api/stats/question/${quizId}`)
+      const d = await r.json()
+      setDetail({ quizId, items: d.items ?? [] })
+    } catch {
+      setErr('内訳の取得に失敗しました')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
+        <h2 style={{ margin:0 }}>統計ダッシュボード</h2>
+        <button className="btn-secondary" onClick={onClose}>← メニューへ戻る</button>
+      </div>
+
+      {err && <div className="tile" style={{ color:'#b00020' }}>{err}</div>}
+      {loading && <div className="tile">読み込み中…</div>}
+
+      <div className="grid" style={{ marginTop: 8 }}>
+        {QUIZZES.map(q => {
+          const t = totals[q.id] ?? { yes: 0, no: 0 }
+          const total = t.yes + t.no
+          return (
+            <div key={q.id} className="tile" style={{ display:'flex', flexDirection:'column', gap:6 }}>
+              <div style={{ fontWeight: 800 }}>{q.name}</div>
+              <div className="result-summary">{q.description}</div>
+              <div style={{ display:'flex', gap:12 }}>
+                <div>YES: <b>{t.yes}</b></div>
+                <div>NO: <b>{t.no}</b></div>
+                <div>合計: <b>{total}</b></div>
+              </div>
+              <div className="actions" style={{ justifyContent:'flex-start' }}>
+                <button className="btn-secondary" onClick={() => loadDetail(q.id)}>設問内訳を見る</button>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {detail && (
+        <div className="tile" style={{ marginTop:12 }}>
+          <div className="kicker">{QUIZZES.find(q=>q.id===detail.quizId)?.name} の設問内訳</div>
+          <div className="grid" style={{ gridTemplateColumns:'repeat(1, minmax(0,1fr))' }}>
+            {detail.items.length === 0 && <div>まだデータがありません</div>}
+            {detail.items.map(it => (
+              <div key={it.questionId} className="tile" style={{ margin:0 }}>
+                <div style={{ fontWeight:600 }}>Q: {it.questionId}</div>
+                <div style={{ display:'flex', gap:12 }}>
+                  <div>YES: <b>{it.yes}</b></div>
+                  <div>NO: <b>{it.no}</b></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// --------- App本体 ---------
 export default function App() {
-  // メニュー / 実施中 / 結果
   const [quizId, setQuizId] = useState<string | null>(null)
   const [step, setStep] = useState(0)
   const [history, setHistory] = useState<{ q: string; a: Answer }[]>([])
@@ -144,7 +240,14 @@ export default function App() {
   const onAnswer = (ans: Answer) => {
     if (!quiz) return
     const q = quiz.questions[step]
-    // スコア加算
+
+    // クリックログをAPIへ送信
+    void fetch(`${API_BASE}/api/logs`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ quizId: quiz.id, questionId: q.id, answer: ans }),
+    }).catch(() => {})
+
     const targets = ans === 'YES' ? q.onYes : q.onNo
     setScores(prev => {
       const next = { ...prev }
@@ -155,10 +258,8 @@ export default function App() {
 
     const nextStep = step + 1
     if (nextStep >= REQUIRED_QUESTIONS) {
-      // 集計
       setFinalType(prev => {
         const entries = Object.entries(scores) as [string, number][]
-        // 直前回答のスコアも反映した上で判定
         targets.forEach(t => {
           const idx = entries.findIndex(([k]) => k === t)
           if (idx >= 0) entries[idx] = [t, entries[idx][1] + 1]
@@ -177,7 +278,6 @@ export default function App() {
   const resetSameQuiz = () => {
     setStep(0); setHistory([]); setScores({}); setFinalType(null)
   }
-
   const backToMenu = () => {
     setQuizId(null); setStep(0); setHistory([]); setScores({}); setFinalType(null)
   }
@@ -198,9 +298,10 @@ export default function App() {
     <div className="container">
       <div className="card">
         <div className="card-body">
-          <div style={{ textAlign:'center', marginBottom: 12 }}>
-            <h1>YES/NO占いコレクション</h1>
-            <p className="lead">3種類から選んで、5問で診断</p>
+          {/* ヘッダー */}
+          <div style={{ textAlign:'left' }}>
+            <h1 style={{ margin:'0 0 4px' }}>YES/NO占いコレクション</h1>
+            <p className="lead" style={{ margin:0 }}>3種類から選んで、5問で診断</p>
           </div>
 
           <AnimatePresence mode="wait">
@@ -301,6 +402,7 @@ export default function App() {
               </motion.div>
             ) : null}
           </AnimatePresence>
+
         </div>
       </div>
     </div>
