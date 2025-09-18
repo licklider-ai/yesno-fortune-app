@@ -298,34 +298,33 @@ export default function App() {
     <div className="container">
       <div className="card">
         <div className="card-body">
-
-          {/* ヘッダー：右上に統計ボタン */}
-            <div style={{ textAlign:'left' }}>
-              <h1 style={{ margin:'0 0 4px' }}>YES/NO占いコレクション</h1>
-              <p className="lead" style={{ margin:0 }}>3種類から選んで、5問で診断</p>
-            </div>
+          {/* ヘッダー */}
+          <div style={{ textAlign:'left' }}>
+            <h1 style={{ margin:'0 0 4px' }}>YES/NO占いコレクション</h1>
+            <p className="lead" style={{ margin:0 }}>3種類から選んで、5問で診断</p>
+          </div>
 
           <AnimatePresence mode="wait">
             {isMenu ? (
-                <motion.div
-                  key="menu"
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -8 }}
-                  transition={{ duration: 0.15 }}
-                >
-                  <div className="grid" style={{ gridTemplateColumns: 'repeat(1, minmax(0, 1fr))' }}>
-                    {QUIZZES.map(q => (
-                      <div key={q.id} className="tile" style={{ display:'flex', flexDirection:'column', gap:8 }}>
-                        <div style={{ fontWeight: 800, fontSize: 18 }}>{q.name}</div>
-                        <div className="result-summary">{q.description}</div>
-                        <div className="actions" style={{ justifyContent:'flex-start' }}>
-                          <button className="btn-primary" onClick={() => startQuiz(q.id)}>この診断を始める</button>
-                        </div>
+              <motion.div
+                key="menu"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.15 }}
+              >
+                <div className="grid" style={{ gridTemplateColumns: 'repeat(1, minmax(0, 1fr))' }}>
+                  {QUIZZES.map(q => (
+                    <div key={q.id} className="tile" style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                      <div style={{ fontWeight: 800, fontSize: 18 }}>{q.name}</div>
+                      <div className="result-summary">{q.description}</div>
+                      <div className="actions" style={{ justifyContent:'flex-start' }}>
+                        <button className="btn-primary" onClick={() => startQuiz(q.id)}>この診断を始める</button>
                       </div>
-                    ))}
-                  </div>
-                </motion.div>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
             ) : !isDone && quiz ? (
               <motion.div
                 key={`quiz-${quiz.id}-${step}`}
