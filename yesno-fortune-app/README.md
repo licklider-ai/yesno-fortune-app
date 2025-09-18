@@ -1,60 +1,112 @@
 # YES/NO 占いアプリ
 
-最短2〜3問の YES/NO で占い結果を表示するシンプルな Web アプリです。  
-React + TypeScript + Vite で構成、Docker対応。
+3種類（**惑星 / 花 / 恋愛**）から選び、YES/NO で5問回答 → 診断結果を表示するシンプルな Web アプリ。  
+**v0.2.0** から回答ログを **PostgreSQL** に保存し、アプリ内で **統計ダッシュボード** を閲覧できます。
 
-## ローカル実行（ターミナル）
+---
+
+## 新機能（v0.2.0）
+- ✅ **DB ログ保存**：YES/NO を PostgreSQL に保存  
+- ✅ **統計ダッシュボード**：クイズ別合計・設問別内訳を UI で確認（メニュー右上「📊 統計を見る」）  
+- ✅ **API 追加**：`/api/logs`（保存）, `/api/stats/*`（集計）, `/api/health`（疎通）
+
+---
+
+## 使用ポート
+- Web（Vite Preview）：**5173**  
+- API（Express）：**8080**  
+- DB（PostgreSQL）：**5432**
+
+---
+
+## クイックスタート（最短手順）
 
 ```bash
-# 1) 依存関係をインストール
-npm ci  # package-lock が無い場合は npm i
+# Web / API / DB を一括で起動
+docker compose up -d --build
+```
 
-# 2) 開発サーバ起動
+起動後、ブラウザでアクセスしてください：
+
+- フロントエンド: http://localhost:5173/  
+- 統計ダッシュボード: http://localhost:5173/#/admin  
+
+---
+
+## 動作確認（API）
+
+以下のコマンドで API が正常に動作しているかを確認できます。  
+※ご利用の環境に応じて **Bash**（Linux/macOS/WSL など）か **PowerShell**（Windows）を選んでください。
+
+---
+
+### 1. ヘルスチェック
+
+- **Bash**
+```bash
+curl -sS http://localhost:8080/api/health
+# => {"ok":true}
+```
+
+- **PowerShell**
+```powershell
+# PowerShell の curl は iwr のエイリアスなので注意
+irm http://localhost:8080/api/health
+```
+
+---
+
+### 2. サンプルログ登録（例：planet/p1 に YES と回答）
+
+- **Bash**
+```bash
+curl -sS -X POST http://localhost:8080/api/logs   -H 'Content-Type: application/json'   -d '{"quizId":"planet","questionId":"p1","answer":"YES"}'
+```
+
+- **PowerShell**
+```powershell
+irm -Method Post -Uri http://localhost:8080/api/logs `
+  -ContentType "application/json" `
+  -Body '{"quizId":"planet","questionId":"p1","answer":"YES"}'
+```
+
+---
+
+### 3. 集計確認（クイズ別 / 設問別）
+
+- **Bash**
+```bash
+# クイズ別 YES/NO 合計
+curl -sS http://localhost:8080/api/stats/quiz/planet
+
+# 設問別 YES/NO 内訳
+curl -sS http://localhost:8080/api/stats/question/planet
+```
+
+- **PowerShell**
+```powershell
+irm http://localhost:8080/api/stats/quiz/planet
+irm http://localhost:8080/api/stats/question/planet
+```
+
+---
+
+### 4. DB を直接確認（任意）
+
+PostgreSQL に保存されたログを直接確認することもできます。
+
+```bash
+docker compose exec -T db psql -U app -d yesno -c "SELECT id, quiz_id, question_id, answer, created_at FROM log_entries ORDER BY id DESC LIMIT 5;"
+```
+
+---
+
+## 開発（ローカル）
+
+```bash
+# フロント
 npm run dev
-# => http://localhost:5173 を開く
+
+# サーバ
+npm run server:dev
 ```
-
-## Docker 実行
-
-```bash
-# イメージビルド
-docker build -t yesno-fortune .
-
-# 実行（ポート 5173）
-docker run --rm -p 5173:5173 yesno-fortune
-# or
-docker compose up --build
-```
-
-## Git 運用（master / develop / feature）
-
-初回セットアップ例：
-```bash
-git init
-git add .
-git commit -m "chore: initial commit"
-git branch -M master
-git checkout -b develop
-git checkout -b feature/initial-ui
-# リモート作成後：
-git remote add origin <YOUR_REPO_URL>
-git push -u origin master
-git push -u origin develop
-git push -u origin feature/initial-ui
-```
-
-フロー例：
-- 開発は `feature/*` ブランチで行い、完了したら `develop` へ PR マージ  
-- リリース時に `develop` → `master` へマージしタグ付け
-
-## 構成
-
-- `src/App.tsx` … 質問分岐と結果表示（データ駆動）
-- `src/App.css` … シンプルなスタイル
-- `Dockerfile` / `docker-compose.yml` … Dockerで実行
-- `scripts/git-setup.sh` … ブランチ作成と初回プッシュ補助
-
-## カスタマイズ
-
-- 質問の分岐や結果は `NODES` を編集するだけで増減・文言変更できます。
-- スタイルを Tailwind などに差し替える場合は `App.css` を変更してください。
