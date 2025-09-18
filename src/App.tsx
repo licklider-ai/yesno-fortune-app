@@ -224,6 +224,7 @@ export default function App() {
   const [history, setHistory] = useState<{ q: string; a: Answer }[]>([])
   const [scores, setScores] = useState<Record<string, number>>({})
   const [finalType, setFinalType] = useState<string | null>(null)
+  const [showStats, setShowStats] = useState(false) // ← 統計画面のトグル
 
   const quiz = QUIZZES.find(q => q.id === quizId) || null
   const isMenu = !quiz
@@ -235,6 +236,7 @@ export default function App() {
     setHistory([])
     setScores({})
     setFinalType(null)
+    setShowStats(false)
   }
 
   const onAnswer = (ans: Answer) => {
@@ -279,7 +281,7 @@ export default function App() {
     setStep(0); setHistory([]); setScores({}); setFinalType(null)
   }
   const backToMenu = () => {
-    setQuizId(null); setStep(0); setHistory([]); setScores({}); setFinalType(null)
+    setQuizId(null); setStep(0); setHistory([]); setScores({}); setFinalType(null); setShowStats(false)
   }
 
   const shareText = useMemo(() => {
@@ -298,15 +300,32 @@ export default function App() {
     <div className="container">
       <div className="card">
         <div className="card-body">
-
           {/* ヘッダー：右上に統計ボタン */}
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap:12 }}>
             <div style={{ textAlign:'left' }}>
               <h1 style={{ margin:'0 0 4px' }}>YES/NO占いコレクション</h1>
               <p className="lead" style={{ margin:0 }}>3種類から選んで、5問で診断</p>
             </div>
+            {isMenu && (
+              <button className="btn-secondary" onClick={() => setShowStats(true)} aria-label="統計を見る">
+                📊 統計を見る
+              </button>
+            )}
+          </div>
 
           <AnimatePresence mode="wait">
             {isMenu ? (
+              showStats ? (
+                <motion.div
+                  key="stats"
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.15 }}
+                >
+                  <StatsView onClose={() => setShowStats(false)} />
+                </motion.div>
+              ) : (
                 <motion.div
                   key="menu"
                   initial={{ opacity: 0, y: 8 }}
@@ -326,6 +345,7 @@ export default function App() {
                     ))}
                   </div>
                 </motion.div>
+              )
             ) : !isDone && quiz ? (
               <motion.div
                 key={`quiz-${quiz.id}-${step}`}
@@ -395,7 +415,12 @@ export default function App() {
                     <div className="actions">
                       <button className="btn-primary" onClick={resetSameQuiz}>同じ診断でもう一度</button>
                       <button className="btn-secondary" onClick={backToMenu}>診断一覧に戻る</button>
-                      <button className="btn-secondary" onClick={async () => { try { await navigator.clipboard.writeText(shareText); alert('シェア用テキストをコピーしました！') } catch {} }}>結果をコピー</button>
+                      <button
+                        className="btn-secondary"
+                        onClick={async () => { try { await navigator.clipboard.writeText(shareText); alert('シェア用テキストをコピーしました！') } catch {} }}
+                      >
+                        結果をコピー
+                      </button>
                     </div>
                     <textarea className="share" readOnly rows={4} value={shareText} />
                   </>
