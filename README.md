@@ -19,14 +19,44 @@
 
 ---
 
-## クイックスタート（最短手順）
+## 必要要件
+- Docker Engine 24+
+- Docker Compose v2
+
+---
+
+## クイックスタート（方式A：ディレクトリを移動して実行）
 
 ```bash
-# Web / API / DB を一括で起動
+# Linux / macOS / WSL
+cd yesno-fortune-app
 docker compose up -d --build
 ```
 
-起動後、ブラウザでアクセスしてください：
+```powershell
+# Windows PowerShell
+Set-Location yesno-fortune-app
+docker compose up -d --build
+```
+
+### 初回だけ（DBテーブル作成）
+```bash
+docker compose exec -T db psql -U app -d yesno -c "
+CREATE TABLE IF NOT EXISTS log_entries(
+  id SERIAL PRIMARY KEY,
+  quiz_id TEXT NOT NULL,
+  question_id TEXT NOT NULL,
+  answer TEXT NOT NULL CHECK (answer IN ('YES','NO')),
+  created_at TIMESTAMPTZ DEFAULT now()
+);"
+```
+
+---
+
+## API エンドポイント
+- GET  /api/health
+- POST /api/logs             # body: {"quizId" or "quiz_id", "questionId" or "question_id", "answer":"YES"|"NO"}
+- GET  /api/stats/summary
 
 - フロントエンド: http://localhost:5173/  
 - 統計ダッシュボード: http://localhost:5173/#/admin  
@@ -38,8 +68,6 @@ docker compose up -d --build
 以下のコマンドで API が正常に動作しているかを確認できます。  
 ※ご利用の環境に応じて **Bash**（Linux/macOS/WSL など）か **PowerShell**（Windows）を選んでください。
 
----
-
 ### 1. ヘルスチェック
 
 - **Bash**
@@ -50,13 +78,10 @@ curl -sS http://localhost:8080/api/health
 
 - **PowerShell**
 ```powershell
-# PowerShell の curl は iwr のエイリアスなので注意
 irm http://localhost:8080/api/health
 ```
 
----
-
-### 2. サンプルログ登録（例：planet/p1 に YES と回答）
+### 2. サンプルログ登録
 
 - **Bash**
 ```bash
@@ -70,16 +95,11 @@ irm -Method Post -Uri http://localhost:8080/api/logs `
   -Body '{"quizId":"planet","questionId":"p1","answer":"YES"}'
 ```
 
----
-
-### 3. 集計確認（クイズ別 / 設問別）
+### 3. 集計確認
 
 - **Bash**
 ```bash
-# クイズ別 YES/NO 合計
 curl -sS http://localhost:8080/api/stats/quiz/planet
-
-# 設問別 YES/NO 内訳
 curl -sS http://localhost:8080/api/stats/question/planet
 ```
 
@@ -89,11 +109,7 @@ irm http://localhost:8080/api/stats/quiz/planet
 irm http://localhost:8080/api/stats/question/planet
 ```
 
----
-
 ### 4. DB を直接確認（任意）
-
-PostgreSQL に保存されたログを直接確認することもできます。
 
 ```bash
 docker compose exec -T db psql -U app -d yesno -c "SELECT id, quiz_id, question_id, answer, created_at FROM log_entries ORDER BY id DESC LIMIT 5;"
@@ -110,3 +126,11 @@ npm run dev
 # サーバ
 npm run server:dev
 ```
+
+---
+
+## トラブルシューティング（よくあるエラー）
+- `no configuration file provided`  
+  → `cd yesno-fortune-app` に移動してから `docker compose up` を実行してください。  
+- ポート競合エラー  
+  → 他のプロセスが 8080 や 5173 を使っていないか確認し、必要なら停止するか `docker-compose.yml` の `ports:` を変更してください。
