@@ -19,6 +19,10 @@
 
 ---
 
+## 必要要件
+- Docker Engine 24+
+- Docker Compose v2
+
 ## クイックスタート（最短手順）
 
 ```bash
@@ -26,7 +30,20 @@
 docker compose up -d --build
 ```
 
-起動後、ブラウザでアクセスしてください：
+### 初回だけ（DBテーブル作成）
+docker compose exec -T db psql -U app -d yesno -c "
+CREATE TABLE IF NOT EXISTS log_entries(
+  id SERIAL PRIMARY KEY,
+  quiz_id TEXT NOT NULL,
+  question_id TEXT NOT NULL,
+  answer TEXT NOT NULL CHECK (answer IN ('YES','NO')),
+  created_at TIMESTAMPTZ DEFAULT now()
+);"
+
+## API エンドポイント
+- GET  /api/health
+- POST /api/logs             # body: {"quizId" or "quiz_id", "questionId" or "question_id", "answer":"YES"|"NO"}
+- GET  /api/stats/summary
 
 - フロントエンド: http://localhost:5173/  
 - 統計ダッシュボード: http://localhost:5173/#/admin  

@@ -1,14 +1,6 @@
 import React, { useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 
-// =============================================================
-// 3種類の診断から選択して、5問に答えて結果を表示する実装
-// - 惑星診断（既存）
-// - 花診断
-// - 恋愛診断
-// 既存の App.css をそのまま利用できます。
-// =============================================================
-
 type Answer = 'YES' | 'NO'
 
 type Fortune = {
@@ -16,14 +8,14 @@ type Fortune = {
   summary: string
   luckyColor: string
   luckyAction: string
-  scores: { work: number; love: number; money: number } // 表示用（恋愛診断でも共通UIで見せます）
+  scores: { work: number; love: number; money: number }
 }
 
 type Question = {
   id: string
   text: string
-  onYes: string[] // YES時に加点するタイプIDの配列
-  onNo: string[]  // NO時に加点するタイプIDの配列
+  onYes: string[]
+  onNo: string[]
 }
 
 type Quiz = {
@@ -33,12 +25,12 @@ type Quiz = {
   hashtag: string
   questions: Question[]
   fortunes: Record<string, Fortune>
-  priority: string[] // 同点時の優先順位
+  priority: string[]
 }
 
 const REQUIRED_QUESTIONS = 5
 
-// ------------------------ 惑星診断（既存） ------------------------
+// ------------ Quiz 定義（省略なくそのまま） ------------
 const planet: Quiz = {
   id: 'planet',
   name: '惑星診断',
@@ -63,7 +55,6 @@ const planet: Quiz = {
   priority: ['sun', 'thunder', 'mountain', 'sea', 'moon', 'star', 'flower'],
 }
 
-// ------------------------ 花診断 ------------------------
 const flower: Quiz = {
   id: 'flower',
   name: '花診断',
@@ -86,7 +77,6 @@ const flower: Quiz = {
   priority: ['sunflower', 'rose', 'sakura', 'tulip', 'lavender'],
 }
 
-// ------------------------ 恋愛診断 ------------------------
 const love: Quiz = {
   id: 'love',
   name: '恋愛診断',
@@ -111,6 +101,27 @@ const love: Quiz = {
 
 const QUIZZES: Quiz[] = [planet, flower, love]
 
+// ===== API ログ送信用（重複させない！） =====
+const API_BASE = (import.meta as any).env?.VITE_API_BASE || 'http://localhost:8080'
+async function logAnswer(payload: { quizId: string; questionId: string; answer: 'YES'|'NO' }) {
+  try {
+    await fetch(`${API_BASE}/api/logs`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+  } catch {}
+}
+async function logComplete(quizId: string) {
+  try {
+    await fetch(`${API_BASE}/api/logs/complete`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ quizId }),
+    })
+  } catch {}
+}
+
 function Stars({ value }: { value: number }) {
   return (
     <div className="stars" aria-label={`スコア ${value}/5`}>
@@ -122,7 +133,6 @@ function Stars({ value }: { value: number }) {
 }
 
 export default function App() {
-  // メニュー / 実施中 / 結果
   const [quizId, setQuizId] = useState<string | null>(null)
   const [step, setStep] = useState(0)
   const [history, setHistory] = useState<{ q: string; a: Answer }[]>([])
@@ -144,6 +154,10 @@ export default function App() {
   const onAnswer = (ans: Answer) => {
     if (!quiz) return
     const q = quiz.questions[step]
+
+    // 回答ログ（非同期・待たない）
+    logAnswer({ quizId: quiz.id, questionId: q.id, answer: ans })
+
     // スコア加算
     const targets = ans === 'YES' ? q.onYes : q.onNo
     setScores(prev => {
@@ -158,7 +172,7 @@ export default function App() {
       // 集計
       setFinalType(prev => {
         const entries = Object.entries(scores) as [string, number][]
-        // 直前回答のスコアも反映した上で判定
+        // 直前回答のスコアも反映
         targets.forEach(t => {
           const idx = entries.findIndex(([k]) => k === t)
           if (idx >= 0) entries[idx] = [t, entries[idx][1] + 1]
@@ -170,6 +184,9 @@ export default function App() {
         for (const p of order) if (cands.includes(p)) return p
         return cands[0] || order[0]
       })
+
+      // 診断完了ログ
+      logComplete(quiz.id)
     }
     setStep(nextStep)
   }
@@ -182,7 +199,7 @@ export default function App() {
     setQuizId(null); setStep(0); setHistory([]); setScores({}); setFinalType(null)
   }
 
-  const shareText = useMemo(() => {
+  const shareText = React.useMemo(() => {
     if (!quiz || !finalType) return ''
     const f = quiz.fortunes[finalType]
     return [
@@ -213,12 +230,12 @@ export default function App() {
                 transition={{ duration: 0.15 }}
               >
                 <div className="grid" style={{ gridTemplateColumns: 'repeat(1, minmax(0, 1fr))' }}>
-                  {QUIZZES.map(q => (
-                    <div key={q.id} className="tile" style={{ display:'flex', flexDirection:'column', gap:8 }}>
-                      <div style={{ fontWeight: 800, fontSize: 18 }}>{q.name}</div>
-                      <div className="result-summary">{q.description}</div>
+                  {QUIZZES.map(qz => (
+                    <div key={qz.id} className="tile" style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                      <div style={{ fontWeight: 800, fontSize: 18 }}>{qz.name}</div>
+                      <div className="result-summary">{qz.description}</div>
                       <div className="actions" style={{ justifyContent:'flex-start' }}>
-                        <button className="btn-primary" onClick={() => startQuiz(q.id)}>この診断を始める</button>
+                        <button className="btn-primary" onClick={() => startQuiz(qz.id)}>この診断を始める</button>
                       </div>
                     </div>
                   ))}
