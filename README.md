@@ -33,8 +33,8 @@
 # まだ clone していない場合
 git clone https://github.com/licklider-ai/yesno-fortune-app.git
 
-# リポジトリに移動
-cd yesno-fortune-app
+# clone した場所へ移動（例: ホームディレクトリ）
+cd ~/yesno-fortune-app
 
 # 起動
 docker compose up -d --build
@@ -46,8 +46,8 @@ docker compose up -d --build
 # まだ clone していない場合
 git clone https://github.com/licklider-ai/yesno-fortune-app.git
 
-# リポジトリに移動
-Set-Location yesno-fortune-app
+# clone した場所へ移動（例: ユーザーのホームディレクトリ）
+Set-Location $HOME\yesno-fortune-app
 
 # 起動
 docker compose up -d --build
@@ -57,6 +57,7 @@ docker compose up -d --build
 
 - API: http://localhost:8080/api/health  
 - Web: http://localhost:5173
+
 
 ### 初回だけ（DBテーブル作成）
 ```bash
