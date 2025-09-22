@@ -27,13 +27,16 @@
 
 ## クイックスタート
 
+> **重要:** 以降のコマンドは、必ずこのリポジトリの直下（`docker-compose.yml` がある場所）で実行してください。
+> ここに居ないと `no configuration file provided: not found` というエラーになります。
+
 ### Linux / macOS / WSL
 
 ```bash
 # まだ clone していない場合
 git clone https://github.com/licklider-ai/yesno-fortune-app.git
 
-# clone した場所へ移動（例: ホームディレクトリ）
+# リポジトリへ移動（例: ホーム配下）
 cd ~/yesno-fortune-app
 
 # 起動
@@ -46,7 +49,7 @@ docker compose up -d --build
 # まだ clone していない場合
 git clone https://github.com/licklider-ai/yesno-fortune-app.git
 
-# clone した場所へ移動（例: ユーザーのホームディレクトリ）
+# リポジトリへ移動（例: ユーザーのホーム配下）
 Set-Location $HOME\yesno-fortune-app
 
 # 起動
@@ -55,9 +58,13 @@ docker compose up -d --build
 
 ### 起動確認
 
-- API: http://localhost:8080/api/health  
+- API: http://localhost:8080/api/health → `{"ok": true}` が返ればOK
 - Web: http://localhost:5173
 
+### よくあるエラー
+
+- `no configuration file provided: not found`  
+  → 現在地に `docker-compose.yml` がありません。`cd ~/yesno-fortune-app` など、リポジトリ直下に移動して再実行してください。
 
 ### 初回だけ（DBテーブル作成）
 ```bash
