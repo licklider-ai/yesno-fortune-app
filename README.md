@@ -33,51 +33,6 @@ docker compose up -d --build
 
 ---
 
-## 初回だけ（DB テーブル作成）
-```bash
-docker compose exec -T db psql -U app -d yesno -c "
-CREATE TABLE IF NOT EXISTS log_entries(
-  id SERIAL PRIMARY KEY,
-  quiz_id TEXT NOT NULL,
-  question_id TEXT NOT NULL,
-  answer TEXT NOT NULL CHECK (answer IN ('YES','NO')),
-  created_at TIMESTAMPTZ DEFAULT now()
-);"
-```
-
----
-
-## API エンドポイント
-
-- `GET  /api/health`  
-  疎通確認 → `{"ok":true}` を返します。
-
-- `POST /api/logs`  
-  回答ログを保存します。  
-  Body（JSON）例:
-  ```json
-  {"quizId":"planet","questionId":"q1","answer":"YES"}
-  ```
-  ※ `quiz_id` / `question_id` 形式でも可、`answer` は YES/NO。
-
-- `POST /api/logs/complete`  
-  診断完了ログを記録します。  
-  Body（JSON）例:
-  ```json
-  {"quizId":"planet"}
-  ```
-
-- `GET  /api/stats/summary`  
-  集計結果を返します。例:
-  ```json
-  {
-    "quizzes": { "planet": 3 },
-    "questions": { "q1": { "yes": 2, "no": 1 } }
-  }
-  ```
-
----
-
 ## 動作確認（API）
 
 以下のコマンドで API が正常に動作しているかを確認できます。  
