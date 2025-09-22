@@ -27,17 +27,36 @@
 
 ## クイックスタート
 
+### Linux / macOS / WSL
+
 ```bash
-# Linux / macOS / WSL
+# まだ clone していない場合
+git clone https://github.com/licklider-ai/yesno-fortune-app.git
+
+# リポジトリに移動
 cd yesno-fortune-app
+
+# 起動
 docker compose up -d --build
 ```
 
+### Windows PowerShell
+
 ```powershell
-# Windows PowerShell
+# まだ clone していない場合
+git clone https://github.com/licklider-ai/yesno-fortune-app.git
+
+# リポジトリに移動
 Set-Location yesno-fortune-app
+
+# 起動
 docker compose up -d --build
 ```
+
+### 起動確認
+
+- API: http://localhost:8080/api/health  
+- Web: http://localhost:5173
 
 ### 初回だけ（DBテーブル作成）
 ```bash
