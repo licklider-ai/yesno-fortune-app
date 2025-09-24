@@ -1,14 +1,13 @@
-import React, { useMemo, useState, useEffect } from 'react'
+import React, { useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 const API_BASE = (import.meta as any).env?.VITE_API_URL || 'http://localhost:8080'
 
 // =============================================================
-// 3種類の診断から選択して、5問に答えて結果を表示する実装
-// - 惑星診断（既存）
+// 3種類の診断から選択して、5問に答えて結果を表示する実装（フロント専用）
+// - 惑星診断
 // - 花診断
 // - 恋愛診断
-// 既存の App.css をそのまま利用できます。
 // =============================================================
 
 type Answer = 'YES' | 'NO'
@@ -123,101 +122,6 @@ function Stars({ value }: { value: number }) {
   )
 }
 
-// --------- StatsView（統計画面）---------
-function StatsView({ onClose }: { onClose: () => void }) {
-  const [totals, setTotals] = useState<Record<string, { yes: number; no: number }>>({})
-  const [detail, setDetail] = useState<{ quizId: string; items: { questionId: string; yes: number; no: number }[] } | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [err, setErr] = useState<string | null>(null)
-
-  useEffect(() => {
-    let canceled = false
-    ;(async () => {
-      try {
-        setLoading(true); setErr(null)
-        const pairs = await Promise.all(
-          QUIZZES.map(async (q) => {
-            const r = await fetch(`${API_BASE}/api/stats/quiz/${q.id}`)
-            const d = await r.json()
-            return [q.id, { yes: d.yes ?? 0, no: d.no ?? 0 }] as const
-          })
-        )
-        if (!canceled) setTotals(Object.fromEntries(pairs))
-      } catch {
-        if (!canceled) setErr('統計の取得に失敗しました')
-      } finally {
-        if (!canceled) setLoading(false)
-      }
-    })()
-    return () => { canceled = true }
-  }, [])
-
-  const loadDetail = async (quizId: string) => {
-    try {
-      setLoading(true); setErr(null)
-      const r = await fetch(`${API_BASE}/api/stats/question/${quizId}`)
-      const d = await r.json()
-      setDetail({ quizId, items: d.items ?? [] })
-    } catch {
-      setErr('内訳の取得に失敗しました')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  return (
-    <div>
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
-        <h2 style={{ margin:0 }}>統計ダッシュボード</h2>
-        <button className="btn-secondary" onClick={onClose}>← メニューへ戻る</button>
-      </div>
-
-      {err && <div className="tile" style={{ color:'#b00020' }}>{err}</div>}
-      {loading && <div className="tile">読み込み中…</div>}
-
-      <div className="grid" style={{ marginTop: 8 }}>
-        {QUIZZES.map(q => {
-          const t = totals[q.id] ?? { yes: 0, no: 0 }
-          const total = t.yes + t.no
-          return (
-            <div key={q.id} className="tile" style={{ display:'flex', flexDirection:'column', gap:6 }}>
-              <div style={{ fontWeight: 800 }}>{q.name}</div>
-              <div className="result-summary">{q.description}</div>
-              <div style={{ display:'flex', gap:12 }}>
-                <div>YES: <b>{t.yes}</b></div>
-                <div>NO: <b>{t.no}</b></div>
-                <div>合計: <b>{total}</b></div>
-              </div>
-              <div className="actions" style={{ justifyContent:'flex-start' }}>
-                <button className="btn-secondary" onClick={() => loadDetail(q.id)}>設問内訳を見る</button>
-              </div>
-            </div>
-          )
-        })}
-      </div>
-
-      {detail && (
-        <div className="tile" style={{ marginTop:12 }}>
-          <div className="kicker">{QUIZZES.find(q=>q.id===detail.quizId)?.name} の設問内訳</div>
-          <div className="grid" style={{ gridTemplateColumns:'repeat(1, minmax(0,1fr))' }}>
-            {detail.items.length === 0 && <div>まだデータがありません</div>}
-            {detail.items.map(it => (
-              <div key={it.questionId} className="tile" style={{ margin:0 }}>
-                <div style={{ fontWeight:600 }}>Q: {it.questionId}</div>
-                <div style={{ display:'flex', gap:12 }}>
-                  <div>YES: <b>{it.yes}</b></div>
-                  <div>NO: <b>{it.no}</b></div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
-
-// --------- App本体 ---------
 export default function App() {
   const [quizId, setQuizId] = useState<string | null>(null)
   const [step, setStep] = useState(0)
@@ -241,13 +145,14 @@ export default function App() {
     if (!quiz) return
     const q = quiz.questions[step]
 
-    // クリックログをAPIへ送信
+    // ログ送信
     void fetch(`${API_BASE}/api/logs`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ quizId: quiz.id, questionId: q.id, answer: ans }),
     }).catch(() => {})
 
+    // スコア加算
     const targets = ans === 'YES' ? q.onYes : q.onNo
     setScores(prev => {
       const next = { ...prev }
@@ -298,34 +203,32 @@ export default function App() {
     <div className="container">
       <div className="card">
         <div className="card-body">
-
-          {/* ヘッダー：右上に統計ボタン */}
-            <div style={{ textAlign:'left' }}>
-              <h1 style={{ margin:'0 0 4px' }}>YES/NO占いコレクション</h1>
-              <p className="lead" style={{ margin:0 }}>3種類から選んで、5問で診断</p>
-            </div>
+          <div style={{ textAlign:'left' }}>
+            <h1 style={{ margin:'0 0 4px' }}>YES/NO占いコレクション</h1>
+            <p className="lead" style={{ margin:0 }}>3種類から選んで、5問で診断</p>
+          </div>
 
           <AnimatePresence mode="wait">
             {isMenu ? (
-                <motion.div
-                  key="menu"
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -8 }}
-                  transition={{ duration: 0.15 }}
-                >
-                  <div className="grid" style={{ gridTemplateColumns: 'repeat(1, minmax(0, 1fr))' }}>
-                    {QUIZZES.map(q => (
-                      <div key={q.id} className="tile" style={{ display:'flex', flexDirection:'column', gap:8 }}>
-                        <div style={{ fontWeight: 800, fontSize: 18 }}>{q.name}</div>
-                        <div className="result-summary">{q.description}</div>
-                        <div className="actions" style={{ justifyContent:'flex-start' }}>
-                          <button className="btn-primary" onClick={() => startQuiz(q.id)}>この診断を始める</button>
-                        </div>
+              <motion.div
+                key="menu"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.15 }}
+              >
+                <div className="grid" style={{ gridTemplateColumns: 'repeat(1, minmax(0, 1fr))' }}>
+                  {QUIZZES.map(q => (
+                    <div key={q.id} className="tile" style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                      <div style={{ fontWeight: 800, fontSize: 18 }}>{q.name}</div>
+                      <div className="result-summary">{q.description}</div>
+                      <div className="actions" style={{ justifyContent:'flex-start' }}>
+                        <button className="btn-primary" onClick={() => startQuiz(q.id)}>この診断を始める</button>
                       </div>
-                    ))}
-                  </div>
-                </motion.div>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
             ) : !isDone && quiz ? (
               <motion.div
                 key={`quiz-${quiz.id}-${step}`}
