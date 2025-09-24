@@ -27,7 +27,7 @@
 
 ## クイックスタート
 
-> **重要:** 以降のコマンドは、必ずこのリポジトリの直下（`docker-compose.yml` がある場所）で実行してください。
+> **重要:** 以降のコマンドは、必ずこのリポジトリの直下（`docker-compose.yml` がある場所）で実行してください。  
 > ここに居ないと `no configuration file provided: not found` というエラーになります。
 
 ### Linux / macOS / WSL
@@ -58,13 +58,8 @@ docker compose up -d --build
 
 ### 起動確認
 
-- API: http://localhost:8080/api/health → `{"ok": true}` が返ればOK
+- API: http://localhost:8080/api/health → `{"ok": true}` が返ればOK  
 - Web: http://localhost:5173
-
-### よくあるエラー
-
-- `no configuration file provided: not found`  
-  → 現在地に `docker-compose.yml` がありません。`cd ~/yesno-fortune-app` など、リポジトリ直下に移動して再実行してください。
 
 ### 初回だけ（DBテーブル作成）
 ```bash
@@ -157,7 +152,35 @@ npm run server:dev
 ---
 
 ## トラブルシューティング（よくあるエラー）
-- `no configuration file provided`  
+
+- **`no configuration file provided`**  
   → `cd yesno-fortune-app` に移動してから `docker compose up` を実行してください。  
-- ポート競合エラー  
-  → 他のプロセスが 8080 や 5173 を使っていないか確認し、必要なら停止するか `docker-compose.yml` の `ports:` を変更してください。
+
+- **ポート競合エラー**  
+  → 他のプロセスが 8080 や 5173 を使っていないか確認し、必要なら停止するか `docker-compose.yml` の `ports:` を変更してください。  
+
+- **DB テーブルの二重作成エラー**  
+  `CREATE TABLE` 実行時に  
+  ```
+  NOTICE: relation "log_entries" already exists, skipping
+  ```  
+  と表示される場合がありますが、これは「既にテーブルが存在しているためスキップした」という通知です。エラーではなく正常動作なので、そのまま続行して問題ありません。  
+
+- **別ディレクトリで起動できない**  
+  クローン先を変えて動かす場合、`Dockerfile` や `docker-compose.yml` のビルドコンテキストが正しく設定されていないとエラーになります。  
+  → 必ずリポジトリ直下でコマンドを実行してください。もしカスタム構成にする場合は、`docker-compose.yml` の `build.context` を修正する必要があります。  
+
+- **API が反応しない**  
+  `curl http://localhost:8080/api/health` で確認して `{"ok":true}` が返らない場合、API コンテナが正しく起動していない可能性があります。  
+  ```bash
+  docker compose logs api
+  ```  
+  を実行してエラーメッセージを確認してください。  
+
+---
+
+## 運用メモ
+
+- 初回起動時に DB テーブルを作成したら、以降は再度作成する必要はありません。  
+- もしスキーマを変更したい場合は、`ALTER TABLE` で修正するか、DB を削除して `docker compose up -d --build` を再実行してください。  
+- ほとんどのトラブルは **作業ディレクトリの位置** と **ポート競合** に起因します。困ったときはまずそこを確認してください。  
