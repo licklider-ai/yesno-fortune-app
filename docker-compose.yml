@@ -1,7 +1,53 @@
+name: yesno-fortune-app
+
 services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+      POSTGRES_DB: yesno
+    ports:
+      - "5432:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d yesno -h 127.0.0.1 -p 5432"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+  api:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+      POSTGRES_DB: yesno
+      POSTGRES_PORT: 5432
+      API_PORT: 8080
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
   web:
-    build: .
+    build:
+      context: .
+      args:
+        # 将来フロントで参照する場合のために残しておく（無くても可）
+        - VITE_API_ORIGIN=http://localhost:8080
     ports:
       - "5173:5173"
-    environment:
-      - NODE_ENV=production
+    depends_on:
+      - api
+    restart: unless-stopped
+    # ★ ここがポイント：/api を付けたURLにプロキシ
+    command: sh -lc "npx http-server dist -p 5173 -a 0.0.0.0 -P http://api:8080/api"
+
+volumes:
+  db-data:
