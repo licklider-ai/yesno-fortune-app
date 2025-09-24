@@ -1,0 +1,50 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: yesno
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d yesno"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      # 初回にテーブル作成。ファイルはこの後作ります
+      - ./db/init.sql:/docker-entrypoint-initdb.d/00-init.sql:ro
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    environment:
+      DATABASE_URL: postgres://app:app@db:5432/yesno
+      NODE_ENV: development
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+
+  web:
+    build:
+      context: .
+    # ← Dockerfile.web を repo ルートに置いている前提
+      dockerfile: Dockerfile.web
+    environment:
+      # フロントからAPIを叩くベースURL（HashRouter想定）
+      VITE_API_BASE: http://localhost:8080
+      NODE_ENV: production
+    ports:
+      - "5173:5173"
+    depends_on:
+      - api
+
+volumes:
+  db_data:
