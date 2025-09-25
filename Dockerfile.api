@@ -1,0 +1,14 @@
+# ---- API ----
+FROM node:20-alpine
+WORKDIR /app
+
+# 依存だけコピー（node_modules は .dockerignore で除外）
+COPY api/package*.json ./
+RUN npm install --omit=dev && apk add --no-cache wget
+
+# アプリ本体
+COPY api/ ./
+
+ENV PORT=8080
+EXPOSE 8080
+CMD ["npm","start"]

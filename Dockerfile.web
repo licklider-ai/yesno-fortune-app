@@ -1,0 +1,22 @@
+# ---- ビルド ----
+FROM node:20-alpine AS build
+WORKDIR /app
+
+# 依存インストール
+COPY web/package*.json ./
+RUN npm install
+
+# ソースコードをコピーしてビルド
+COPY web/ ./
+RUN npm run build
+
+# ---- 配信 ----
+FROM node:20-alpine
+WORKDIR /app
+RUN npm install -g http-server
+
+# ビルド成果物だけをコピー
+COPY --from=build /app/dist ./dist
+
+EXPOSE 5173
+CMD ["http-server", "dist", "-p", "5173", "-a", "0.0.0.0", "-P", "http://api:8080"]

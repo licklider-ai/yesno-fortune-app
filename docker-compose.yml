@@ -8,7 +8,7 @@ services:
       POSTGRES_PASSWORD: app
       POSTGRES_DB: yesno
     ports:
-      - "5432:5432"
+      - "5432:5432"   # 既存Postgresがいれば 5433:5432 に
     volumes:
       - db-data:/var/lib/postgresql/data
     healthcheck:
@@ -20,39 +20,34 @@ services:
   api:
     build:
       context: .
-      dockerfile: server/Dockerfile
+      dockerfile: Dockerfile.api
     environment:
-      POSTGRES_HOST: db
-      POSTGRES_USER: app
-      POSTGRES_PASSWORD: app
-      POSTGRES_DB: yesno
-      POSTGRES_PORT: 5432
-      API_PORT: 8080
+      DATABASE_URL: postgres://app:app@db:5432/yesno  # ← これだけでOK
+      PORT: 8080                                      # ← server.js は PORT を参照
     ports:
       - "8080:8080"
     depends_on:
       db:
         condition: service_healthy
     restart: unless-stopped
-    # （任意）ヘルスチェックを付けると依存側の監視が楽
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:8080/api/health"]
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/api/health >/dev/null 2>&1 || exit 1"]
       interval: 5s
-      timeout: 3s
+      timeout: 5s
       retries: 30
 
   web:
     build:
       context: .
-      args:
-        - VITE_API_ORIGIN=http://localhost:8080
+      dockerfile: Dockerfile.web
     ports:
       - "5173:5173"
     depends_on:
-      - api
+      api:
+        condition: service_healthy
     restart: unless-stopped
-    # /api へのアクセスは存在しない静的ファイルとして扱われ、下記へフォールバックでプロキシされる
-    command: sh -lc "npx http-server dist -p 5173 -a 0.0.0.0 -P http://api:8080"
+    command: >
+      sh -lc "http-server dist -p 5173 -a 0.0.0.0 -P http://api:8080"
 
 volumes:
   db-data:
