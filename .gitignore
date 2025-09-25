@@ -1,4 +1,36 @@
-node_modules/
-dist/
+# VCS
+.git
+.github
+.git/**
+
+# OS/IDE
 .DS_Store
-.env*
+.vscode
+.idea
+
+# Node依存（ローカルのものは送らない）
+node_modules
+**/node_modules
+npm-debug.log*
+yarn-error.log*
+
+# ビルド生成物
+dist
+**/dist
+build
+**/build
+coverage
+.vite
+.vitest
+.cache
+.tmp
+
+# 一時ファイル
+*.swp
+*.bak
+tsconfig.tsbuildinfo
+
+# 環境ファイル（例は残す）
+.env
+.env.*
+!.env.example
