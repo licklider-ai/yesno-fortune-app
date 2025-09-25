@@ -8,60 +8,47 @@
 ## 新機能（v0.2.0）
 - ✅ **DB ログ保存**：YES/NO を PostgreSQL に保存  
 - ✅ **統計ダッシュボード**：クイズ別合計・設問別内訳を UI で確認（メニュー右上「📊 統計を見る」）  
-- ✅ **API 追加**：`/api/logs`（保存）, `/api/stats/*`（集計）, `/api/health`（疎通）
+- ✅ **API 追加**：`/api/logs`（保存）, `/api/stats/summary`（集計）, `/api/health`（疎通）
 
 ---
 
 ## 使用ポート
-- Web（Vite Preview）：**5173**  
+- Web（Vite）：**5173**  
 - API（Express）：**8080**  
 - DB（PostgreSQL）：**5432**
 
 ---
 
 ## 必要要件
-- Docker Engine 24+
+- Docker Engine 24+  
 - Docker Compose v2
 
 ---
 
 ## クイックスタート
 
-> **重要:** 以降のコマンドは、必ずこのリポジトリの直下（`docker-compose.yml` がある場所）で実行してください。  
-> ここに居ないと `no configuration file provided: not found` というエラーになります。
+> **重要:** 以降のコマンドは、必ずリポジトリ直下（`docker-compose.yml` がある場所）で実行してください。  
+> ここに居ないと `no configuration file provided: not found` のエラーになります。
 
 ### Linux / macOS / WSL
-
 ```bash
-# まだ clone していない場合
 git clone https://github.com/licklider-ai/yesno-fortune-app.git
-
-# リポジトリへ移動（例: ホーム配下）
-cd ~/yesno-fortune-app
-
-# 起動
+cd yesno-fortune-app
 docker compose up -d --build
 ```
 
 ### Windows PowerShell
-
 ```powershell
-# まだ clone していない場合
 git clone https://github.com/licklider-ai/yesno-fortune-app.git
-
-# リポジトリへ移動（例: ユーザーのホーム配下）
 Set-Location $HOME\yesno-fortune-app
-
-# 起動
 docker compose up -d --build
 ```
 
 ### 起動確認
-
-- API: http://localhost:8080/api/health → `{"ok": true}` が返ればOK  
+- API: http://localhost:8080/api/health → `{"ok":true}` が返ればOK  
 - Web: http://localhost:5173
 
-### 初回だけ（DBテーブル作成）
+### DBテーブル作成（必要に応じていつでも安全に実行可）
 ```bash
 docker compose exec -T db psql -U app -d yesno -c "
 CREATE TABLE IF NOT EXISTS log_entries(
@@ -76,111 +63,117 @@ CREATE TABLE IF NOT EXISTS log_entries(
 ---
 
 ## API エンドポイント
-- GET  /api/health
-- POST /api/logs             # body: {"quizId" or "quiz_id", "questionId" or "question_id", "answer":"YES"|"NO"}
-- GET  /api/stats/summary
+- `GET  /api/health`  
+- `POST /api/logs`  
+  - body: `{"quizId"|"quiz_id", "questionId"|"question_id", "answer":"YES"|"NO"}`
+- `GET  /api/stats/summary`
+
+### `/api/stats/summary` レスポンス例
+```json
+{
+  "quizzes": { "planet": 2, "flower": 1 },
+  "questions": {
+    "p1": { "yes": 1, "no": 0 },
+    "p2": { "yes": 0, "no": 1 }
+  }
+}
+```
 
 - フロントエンド: http://localhost:5173/  
-- 統計ダッシュボード: http://localhost:5173/#/admin  
+- 統計ダッシュボード: http://localhost:5173/#/admin
 
 ---
 
 ## 動作確認（API）
-
-以下のコマンドで API が正常に動作しているかを確認できます。  
-※ご利用の環境に応じて **Bash**（Linux/macOS/WSL など）か **PowerShell**（Windows）を選んでください。
-
 ### 1. ヘルスチェック
-
-- **Bash**
 ```bash
+# Bash
 curl -sS http://localhost:8080/api/health
 # => {"ok":true}
 ```
-
-- **PowerShell**
 ```powershell
+# PowerShell
 irm http://localhost:8080/api/health
 ```
 
 ### 2. サンプルログ登録
-
-- **Bash**
 ```bash
-curl -sS -X POST http://localhost:8080/api/logs   -H 'Content-Type: application/json'   -d '{"quizId":"planet","questionId":"p1","answer":"YES"}'
+# Bash
+curl -sS -X POST http://localhost:8080/api/logs \\
+  -H 'Content-Type: application/json' \\
+  -d '{"quizId":"planet","questionId":"p1","answer":"YES"}'
 ```
-
-- **PowerShell**
 ```powershell
+# PowerShell
 irm -Method Post -Uri http://localhost:8080/api/logs `
   -ContentType "application/json" `
   -Body '{"quizId":"planet","questionId":"p1","answer":"YES"}'
 ```
 
-### 3. 集計確認
-
-- **Bash**
+### 3. 集計取得
 ```bash
-curl -sS http://localhost:8080/api/stats/quiz/planet
-curl -sS http://localhost:8080/api/stats/question/planet
+# Bash
+curl -sS http://localhost:8080/api/stats/summary | jq .
 ```
-
-- **PowerShell**
 ```powershell
-irm http://localhost:8080/api/stats/quiz/planet
-irm http://localhost:8080/api/stats/question/planet
+# PowerShell
+irm http://localhost:8080/api/stats/summary
 ```
 
-### 4. DB を直接確認（任意）
-
+### 4. DB 直接確認（任意）
 ```bash
-docker compose exec -T db psql -U app -d yesno -c "SELECT id, quiz_id, question_id, answer, created_at FROM log_entries ORDER BY id DESC LIMIT 5;"
+docker compose exec -T db psql -U app -d yesno -c \\
+"SELECT id, quiz_id, question_id, answer, created_at
+ FROM log_entries ORDER BY id DESC LIMIT 5;"
 ```
 
 ---
 
 ## 開発（ローカル）
+> Docker ではなく、ローカルでホットリロード開発する場合
 
 ```bash
-# フロント
-npm run dev
+# フロント（Vite）
+cd web
+npm install
+npm run dev    # http://localhost:5173
 
-# サーバ
-npm run server:dev
+# サーバ（Express）
+cd api
+npm install
+npm run dev    # http://localhost:8081 （開発時は8081を使用）
 ```
+
+**補足:**  
+- ローカルAPIは `PORT=8081` / `DATABASE_URL=postgres://app:app@localhost:5432/yesno` を想定。  
+- Dockerで API を動かす時は `http://localhost:8080`。  
+- フロントの API 先は `.env` で切替推奨：
+  - `web/.env.development` → `VITE_API_BASE=http://localhost:8081`  
+  - `web/.env.production`  → `VITE_API_BASE=http://localhost:8080`
 
 ---
 
-## トラブルシューティング（よくあるエラー）
-
+## トラブルシューティング
 - **`no configuration file provided`**  
-  → `cd yesno-fortune-app` に移動してから `docker compose up` を実行してください。  
+  → リポジトリ直下で `docker compose up` を実行。
 
-- **ポート競合エラー**  
-  → 他のプロセスが 8080 や 5173 を使っていないか確認し、必要なら停止するか `docker-compose.yml` の `ports:` を変更してください。  
+- **ポート競合（EADDRINUSE）**  
+  → 8080/5173 を使う他プロセスを停止。  
+  → 開発時は API を 8081 に（`npm run dev`）。
 
-- **DB テーブルの二重作成エラー**  
-  `CREATE TABLE` 実行時に  
-  ```
-  NOTICE: relation "log_entries" already exists, skipping
-  ```  
-  と表示される場合がありますが、これは「既にテーブルが存在しているためスキップした」という通知です。エラーではなく正常動作なので、そのまま続行して問題ありません。  
+- **`relation "log_entries" does not exist`**  
+  → DBテーブル未作成 or 接続先DB/スキーマ違い。  
+  → 上記「DBテーブル作成」を実行し、APIの `DATABASE_URL` が正しいか確認。
 
-- **別ディレクトリで起動できない**  
-  クローン先を変えて動かす場合、`Dockerfile` や `docker-compose.yml` のビルドコンテキストが正しく設定されていないとエラーになります。  
-  → 必ずリポジトリ直下でコマンドを実行してください。もしカスタム構成にする場合は、`docker-compose.yml` の `build.context` を修正する必要があります。  
-
-- **API が反応しない**  
-  `curl http://localhost:8080/api/health` で確認して `{"ok":true}` が返らない場合、API コンテナが正しく起動していない可能性があります。  
+- **APIが応答しない**  
   ```bash
   docker compose logs api
-  ```  
-  を実行してエラーメッセージを確認してください。  
+  ```
+  でエラーを確認。
 
 ---
 
 ## 運用メモ
-
-- 初回起動時に DB テーブルを作成したら、以降は再度作成する必要はありません。  
-- もしスキーマを変更したい場合は、`ALTER TABLE` で修正するか、DB を削除して `docker compose up -d --build` を再実行してください。  
-- ほとんどのトラブルは **作業ディレクトリの位置** と **ポート競合** に起因します。困ったときはまずそこを確認してください。  
+- テーブル作成は `IF NOT EXISTS` のため **繰り返し実行しても安全**。  
+- スキーマ変更は `ALTER TABLE` 推奨。  
+- 多くのトラブルは **作業ディレクトリ** と **ポート競合** が原因です。
