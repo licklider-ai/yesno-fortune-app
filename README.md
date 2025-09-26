@@ -45,15 +45,12 @@ Set-Location $HOME\yesno-fortune-app\web
 docker compose up -d --build
 ```
 
+### 起動確認
 起動後、ブラウザでアクセスしてください：
 
+- API: http://localhost:8080/api/health → `{"ok":true}`  
 - フロントエンド: http://localhost:5173/  
 - 統計ダッシュボード: http://localhost:5173/#/admin  
----
-
-### 起動確認
-- API: http://localhost:8080/api/health → `{"ok":true}`  
-- Web: http://localhost:5173
 
 ### 初回のみ（DBテーブル作成）
 ```bash
