@@ -44,7 +44,7 @@ git clone https://github.com/licklider-ai/yesno-fortune-app.git
 Set-Location $HOME\yesno-fortune-app\web
 docker compose up -d --build
 ```
-```
+
 起動後、ブラウザでアクセスしてください：
 
 - フロントエンド: http://localhost:5173/  
