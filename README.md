@@ -53,19 +53,36 @@ docker compose up -d --build
 - 統計ダッシュボード: http://localhost:5173/#/admin  
 
 ### 初回のみ（DBテーブル作成）
+
+DB コンテナに入り、SQL を実行してください。  
+（この操作は **初回** または `docker compose down -v` で volume を削除した場合に必要です）
+
+#### Linux / macOS / WSL
 ```bash
-docker compose exec -T db psql -U app -d yesno -c "
+docker compose exec db psql -U app -d yesno
+```
+
+#### Windows PowerShell
+```powershell
+docker compose exec db psql -U app -d yesno
+```
+
+psql が起動したら、次のコマンドを入力してください：
+```sql
 CREATE TABLE IF NOT EXISTS log_entries(
   id SERIAL PRIMARY KEY,
   quiz_id TEXT NOT NULL,
   question_id TEXT NOT NULL,
   answer TEXT NOT NULL CHECK (answer IN ('YES','NO')),
   created_at TIMESTAMPTZ DEFAULT now()
-);"
-docker compose restart api
+);
+\q
 ```
 
-DB データは **Docker Volume** に保存されるため、`docker compose down -v` を行うと削除されます。その場合は再度テーブル作成が必要です。
+その後 API を再起動してください：
+```bash
+docker compose restart api
+```
 
 ---
 
@@ -136,4 +153,3 @@ npm run dev    # http://localhost:8081 （開発時は8081を使用）
 - テーブル作成は `IF NOT EXISTS` のため **繰り返し実行しても安全**。  
 - スキーマ変更は `ALTER TABLE` 推奨。  
 - 多くのトラブルは **作業ディレクトリの誤り** と **ポート競合** が原因です。
-
