@@ -1,0 +1,13 @@
+FROM node:20-alpine
+WORKDIR /app
+
+# 依存のみ先に入れる（高速＆再現性）
+COPY package*.json ./
+RUN npm ci --omit=dev
+
+# アプリ本体
+COPY . .
+
+EXPOSE 8080
+# エントリーポイントが server.js でない場合は調整してください
+CMD ["node","server.js"]
