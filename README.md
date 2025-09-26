@@ -30,7 +30,6 @@
 ## クイックスタート
 
 > **重要:** 以降のコマンドは、必ず `web/` ディレクトリで実行してください。  
-> 旧来のルート `docker-compose.yml` は削除されています。
 
 ### Linux / macOS / WSL
 ```bash
@@ -45,6 +44,12 @@ git clone https://github.com/licklider-ai/yesno-fortune-app.git
 Set-Location $HOME\yesno-fortune-app\web
 docker compose up -d --build
 ```
+```
+起動後、ブラウザでアクセスしてください：
+
+- フロントエンド: http://localhost:5173/  
+- 統計ダッシュボード: http://localhost:5173/#/admin  
+---
 
 ### 起動確認
 - API: http://localhost:8080/api/health → `{"ok":true}`  
