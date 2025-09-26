@@ -1,0 +1,41 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    ports:
+      - "5173:5173"
+    depends_on:
+      - api
+
+  api:
+    build:
+      context: ../api
+      dockerfile: Dockerfile.api
+    environment:
+      - DATABASE_URL=postgresql://app:app@db:5432/yesno
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy        # ← これが重要
+    restart: on-failure                   # ← 起動直後に失敗しても再試行
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_DB=yesno
+      - POSTGRES_USER=app
+      - POSTGRES_PASSWORD=app
+    ports:
+      - "5432:5432"
+    healthcheck:                          # ← DBのヘルスチェック
+      test: ["CMD-SHELL", "pg_isready -U app -d yesno -h localhost || exit 1"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+    volumes:
+      - db-data:/var/lib/postgresql/data
+
+volumes:
+  db-data:
